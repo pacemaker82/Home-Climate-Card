@@ -5,6 +5,14 @@
 Custom Lovelace card that renders rooms on floors with current/target temperature,
 heating state, and an optional top labels strip.
 
+## Key Functionality
+
+- Each room can show a climate or temperature entity
+- When the heating is on for any room, rooms on the same circuit will also show heating (unless climate TRV is off). E.g. you have a room that has a temperature sensor, a radiator, but not smart heating.
+- You can set a room to have no heating source if you just want to show the temperature (like attic).
+- You can add rooms to different heating circuits.
+- Rooms are spread over floors, and show up in the UI as such. 
+
 ## Install
 
 1. Goto HACS (if you dont have that installed, install HACS)
@@ -57,7 +65,7 @@ entities:
 
 ### Label entry (`labels` list)
 
-Each label renders an icon + name + state + optional secondary line.
+Each label renders an icon + name + state + optional secondary line. You can show a max of 3 labels.
 
 ```yaml
 labels:

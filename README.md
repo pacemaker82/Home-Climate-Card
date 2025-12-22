@@ -7,13 +7,12 @@ heating state, and an optional top labels strip.
 
 ## Install
 
-1) Place `home-climate-card.js` in your `www/` directory.
-2) Add it as a resource in Lovelace:
-   ```yaml
-   resources:
-     - url: /local/home-climate-card.js
-       type: module
-   ```
+1. Goto HACS (if you dont have that installed, install HACS)
+2. Add a custom repository
+3. Add the URL to this repo: `https://github.com/pacemaker82/Home-Climate-Card` using the category `Dashboard` (used to be `Lovelace` pre HACS 2.0.0)
+4. Go back to HACS and search for "compact power card" in the HACS store
+5. Download and refresh
+6. Goto dashboard, edit dashboard, select 'add card' button, and add the new custom Compact Power Card. Use the configuration below to setup.
 
 ## Basic usage
 
@@ -50,8 +49,8 @@ entities:
 ```
 
 - `entity` (required): climate or temperature entity.
-- `floor`: number used for grouping (higher floors render first). Default `1`.
-- `circuit`: number used to share heating state across non-climate sensors. Default `1`.
+- `floor`: Which floor is the entity on. Default `1` for ground.
+- `circuit`: Default `1`. If you have heating on different circuits make sure to set this appropriately.
 - `name`: label override. Falls back to entity friendly name.
 - `no_heat_source`: if `true`, suppresses heating visuals for this room.
 - `is_heating_entity`: optional binary_sensor used to detect heating when not using a climate sensor.

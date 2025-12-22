@@ -1,5 +1,7 @@
 # Home Climate Card
 
+<img width="1013" height="313" alt="Screenshot 2025-12-22 at 12 08 56" src="https://github.com/user-attachments/assets/8a497a67-2188-418d-92b9-39311b1240c3" />
+
 Custom Lovelace card that renders rooms on floors with current/target temperature,
 heating state, and an optional top labels strip.
 

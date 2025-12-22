@@ -36,13 +36,6 @@ entities:
 
 - `entities` (required): list of room entries (see below).
 - `labels`: list of label entries for the top strip (optional).
-- `canvas_width`: number in px. If set, fixes card width.
-- `canvas_height`: number in px. If set, fixes card height.
-- `canvas_size`: number in px. If set, applies to both width and height.
-- `minimum_threshold_temperature`: number, default `16`.
-- `maximum_threshold_temperature`: number, default `20`.
-- `minimum_threshold_color`: RGB array, default `[87, 113, 151]`.
-- `maximum_threshold_color`: RGB array, default `[241, 157, 56]`.
 
 ### Room entry (`entities` list)
 
@@ -61,7 +54,7 @@ entities:
 - `circuit`: number used to share heating state across non-climate sensors. Default `1`.
 - `name`: label override. Falls back to entity friendly name.
 - `no_heat_source`: if `true`, suppresses heating visuals for this room.
-- `is_heating_entity`: optional binary_sensor used to detect heating.
+- `is_heating_entity`: optional binary_sensor used to detect heating when not using a climate sensor.
 
 ### Label entry (`labels` list)
 
@@ -101,11 +94,6 @@ Notes:
 
 ```yaml
 type: custom:home-climate-card
-canvas_size: 480
-minimum_threshold_temperature: 16
-maximum_threshold_temperature: 20
-minimum_threshold_color: [87, 113, 151]
-maximum_threshold_color: [241, 157, 56]
 entities:
   - entity: climate.living_room
     floor: 1

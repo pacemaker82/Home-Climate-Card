@@ -1,5 +1,7 @@
 # Home Climate Card
 
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/pacemaker82/home-climate-card/total?label=Total%20Downloads) ![GitHub Downloads (all assets, latest release)](https://img.shields.io/github/downloads/pacemaker82/home-climate-card/latest/total?label=Latest%20Version)
+
 <img width="999" height="310" alt="Screenshot 2025-12-22 at 13 07 14" src="https://github.com/user-attachments/assets/40aff459-068e-4410-9c78-d3f2a02a4a66" />
 
 Custom Lovelace card that renders rooms on floors with current/target temperature,

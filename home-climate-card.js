@@ -138,8 +138,8 @@ class HomeClimateCard extends HTMLElement {
           height: 100%;
           margin: 0 auto;
           overflow: hidden;
+          min-height: var(--home-climate-card-min-height, 260px);
           min-width: 0;
-          min-height: 0;
         }
         .rooms {
           position: absolute;
@@ -157,7 +157,7 @@ class HomeClimateCard extends HTMLElement {
           grid-template-columns: repeat(3, 1fr);
           gap: 6px;
           padding: 10px 10px 4px;
-          pointer-events: none;
+          pointer-events: auto;
         }
         .labels[data-count="1"] {
           grid-template-columns: 1fr;
@@ -195,6 +195,11 @@ class HomeClimateCard extends HTMLElement {
           border-radius: 8px;
           padding: 6px 10px;
           box-sizing: border-box;
+          cursor: pointer;
+        }
+        .label:focus-visible {
+          outline: 2px solid var(--state-climate-heat-color);
+          outline-offset: 2px;
         }
         .label:nth-child(3) {
           grid-template-columns: 1fr auto;
@@ -263,6 +268,9 @@ class HomeClimateCard extends HTMLElement {
           color: var(--secondary-text-color);
           letter-spacing: 0.2px;
           margin-top: 0px;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          line-height: 1.05;
         }
         .label-secondary-value {
           font-weight: 700;
@@ -454,8 +462,9 @@ class HomeClimateCard extends HTMLElement {
       this._rooms = rooms;
       this._labels = labels;
       this._card = card;
-      this._resizeObserver = new ResizeObserver(() => this._render(true));
+      this._resizeObserver = new ResizeObserver(() => this._scheduleRender());
       this._resizeObserver.observe(this._card);
+      this._resizeObserver.observe(this);
     }
     this._render(true);
   }
@@ -465,6 +474,10 @@ class HomeClimateCard extends HTMLElement {
     if (this._iconTimer) {
       clearTimeout(this._iconTimer);
       this._iconTimer = null;
+    }
+    this._scheduleRender();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => this._scheduleRender());
     }
   }
 
@@ -548,19 +561,20 @@ class HomeClimateCard extends HTMLElement {
     const rect = this._card.getBoundingClientRect();
     const width = rect.width || configWidth || 0;
     const height = rect.height || configHeight || 0;
-    if (!width || !height) return;
+    if (!width || !height) {
+
+      this._renderRetryCount = (this._renderRetryCount || 0) + 1;
+      if (this._renderRetryCount <= 30) {
+        this._scheduleRender(120);
+      }
+      return;
+    }
+    this._renderRetryCount = 0;
     const roomsPaddingX = 4;
     const roomsPaddingBottom = 4;
     const labelsConfig = Array.isArray(this._config.labels) ? this._config.labels : [];
     const hasLabels = labelsConfig.length > 0;
     const entities = this._config.entities || [];
-    const minColor = this._config.minimum_threshold_color || [87, 113, 151];
-    const maxColor = this._config.maximum_threshold_color || [241, 157, 56];
-    const minTemp = Number(this._config.minimum_threshold_temperature) || 16;
-    const maxTemp = Number(this._config.maximum_threshold_temperature) || 20;
-    const minRgb = this._parseRgb(minColor, [87, 113, 151]);
-    const maxRgb = this._parseRgb(maxColor, [241, 157, 56]);
-    const tempRange = Math.max(1, maxTemp - minTemp);
 
     const grouped = new Map();
     entities.forEach((item, order) => {
@@ -571,6 +585,11 @@ class HomeClimateCard extends HTMLElement {
       grouped.get(floor).push({ item, order, circuit });
     });
     const floorNumbers = Array.from(grouped.keys()).sort((a, b) => b - a);
+    if (!configHeight) {
+      const floorCount = floorNumbers.length || 1;
+      const baseHeight = floorCount * 100 + (hasLabels ? 90 : 0);
+      this._card.style.minHeight = `${baseHeight}px`;
+    }
     this._rooms.innerHTML = "";
 
     if (this._labels) {
@@ -595,6 +614,28 @@ class HomeClimateCard extends HTMLElement {
         const iconName = configItem.icon || stateObj.attributes && stateObj.attributes.icon || "";
         const label = document.createElement("div");
         label.className = "label";
+        label.setAttribute("role", "button");
+        label.setAttribute("tabindex", "0");
+        label.setAttribute(
+          "aria-label",
+          configItem.name
+            || (stateObj.attributes && stateObj.attributes.friendly_name)
+            || configItem.entity
+        );
+        const openMoreInfo = () => {
+          this.dispatchEvent(new CustomEvent("hass-more-info", {
+            detail: { entityId: configItem.entity },
+            bubbles: true,
+            composed: true,
+          }));
+        };
+        label.addEventListener("click", openMoreInfo);
+        label.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openMoreInfo();
+          }
+        });
         const icon = document.createElement("ha-icon");
         if (iconName) {
           icon.setAttribute("icon", iconName);
@@ -697,12 +738,6 @@ class HomeClimateCard extends HTMLElement {
         const targetUnitText = hasTarget ? unit : "";
 
         const tempValue = typeof temp === "number" ? temp : parseFloat(temp);
-        const tempRatio = Number.isFinite(tempValue)
-          ? Math.pow(Math.max(0, Math.min(1, (tempValue - minTemp) / tempRange)), 0.6)
-          : 0;
-        const bgRgb = this._mixColor(minRgb, maxRgb, tempRatio);
-        const bgColor = `rgb(${bgRgb[0]}, ${bgRgb[1]}, ${bgRgb[2]})`;
-
         const room = document.createElement("div");
         room.className = "room";
         if (Number.isFinite(tempValue)) {
@@ -802,9 +837,26 @@ class HomeClimateCard extends HTMLElement {
     });
   }
 
+  _scheduleRender(delayMs = 0) {
+    if (this._renderScheduled) return;
+    this._renderScheduled = true;
+    const run = () => {
+      requestAnimationFrame(() => {
+        this._renderScheduled = false;
+        this._render(true);
+      });
+    };
+    if (delayMs > 0) {
+      setTimeout(run, delayMs);
+    } else {
+      run();
+    }
+  }
+
   _computeRenderKey() {
     if (!this._hass || !this._config) return "";
     const entities = this._config.entities || [];
+    const labels = Array.isArray(this._config.labels) ? this._config.labels : [];
     const parts = [];
     entities.forEach((item) => {
       if (!item || !item.entity) return;
@@ -819,6 +871,40 @@ class HomeClimateCard extends HTMLElement {
         currentTemp,
         targetTemp
       );
+    });
+    labels.forEach((item) => {
+      if (!item || !item.entity) return;
+      const stateObj = this._hass.states[item.entity];
+      const state = stateObj ? stateObj.state : "";
+      const attrs = stateObj ? stateObj.attributes : {};
+      const unit = attrs ? attrs.unit_of_measurement : "";
+      const icon = attrs ? attrs.icon : "";
+      const name = attrs ? attrs.friendly_name : "";
+      parts.push(
+        "label",
+        item.entity,
+        state,
+        unit,
+        icon,
+        name
+      );
+      if (item.secondary) {
+        if (item.secondary === "last_updated") {
+          const updated = stateObj ? (stateObj.last_updated || stateObj.last_changed || "") : "";
+          parts.push("label_last_updated", updated);
+        } else {
+          const secondaryObj = this._hass.states[item.secondary];
+          const secondaryState = secondaryObj ? secondaryObj.state : "";
+          const secondaryAttrs = secondaryObj ? secondaryObj.attributes : {};
+          const secondaryUnit = secondaryAttrs ? secondaryAttrs.unit_of_measurement : "";
+          parts.push(
+            "label_secondary",
+            item.secondary,
+            secondaryState,
+            secondaryUnit
+          );
+        }
+      }
     });
     const key = parts.join("|");
     return key;
@@ -996,22 +1082,6 @@ class HomeClimateCard extends HTMLElement {
         nameEl.style.fontSize = `${size}px`;
       }
     });
-  }
-
-  _parseRgb(value, fallback) {
-    if (Array.isArray(value) && value.length === 3) {
-      return value.map((v, i) => this._clamp(Number(v), 0, 255) || fallback[i]);
-    }
-    return fallback;
-  }
-
-  _mixColor(low, high, t) {
-    const tt = this._clamp(t, 0, 1);
-    return [
-      Math.round(low[0] + (high[0] - low[0]) * tt),
-      Math.round(low[1] + (high[1] - low[1]) * tt),
-      Math.round(low[2] + (high[2] - low[2]) * tt),
-    ];
   }
 
   _clamp(value, min, max) {

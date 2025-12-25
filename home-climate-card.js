@@ -330,10 +330,10 @@ class HomeClimateCard extends HTMLElement {
         }
         .room-change-icon {
           position: absolute;
-          top: 2px;
-          left: 50%;
-          transform: translateX(-50%);
-          --mdc-icon-size: 24px;
+          top: var(--chevron-top, calc(var(--current-top, 0px) / 2));
+          left: var(--chevron-left, 50%);
+          transform: translate(-50%, -50%);
+          --mdc-icon-size: var(--chevron-size, 24px);
           color: var(--state-climate-heat-color);
           opacity: 0;
           transition: opacity 0.35s ease-in-out;
@@ -347,6 +347,16 @@ class HomeClimateCard extends HTMLElement {
         }
         .room.heating {
           background-color: transparent;
+          filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25));
+        }
+        .room.heating .current,
+        .room.heating .target,
+        .room.heating .name {
+          text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        .room.heating .current ha-icon,
+        .room.heating .target ha-icon {
+          filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.3));
         }
         .room.heating .room-heat-overlay {
           opacity: 0.3;
@@ -358,7 +368,7 @@ class HomeClimateCard extends HTMLElement {
           align-items: center;
           justify-items: center;
           row-gap: 6px;
-          padding-bottom: 16px;
+          padding-bottom: var(--room-padding-bottom, 10px);
           padding-left: clamp(4px, 3%, 10px);
           padding-right: clamp(4px, 3%, 10px);
         }
@@ -423,6 +433,7 @@ class HomeClimateCard extends HTMLElement {
           line-height: 1;
           letter-spacing: -1px;
           color: var(--secondary-text-color);
+          margin-top: -4px;
         }
         .target.heating {
           color: var(--state-climate-heat-color);
@@ -434,7 +445,7 @@ class HomeClimateCard extends HTMLElement {
         }
         .target ha-icon {
           --mdc-icon-size: 14px;
-          margin-right: 4px;
+          margin-right: 0px;
         }
         .target-value,
         .target-unit {
@@ -947,18 +958,41 @@ class HomeClimateCard extends HTMLElement {
           contentEl.style.paddingLeft = "";
           contentEl.style.paddingRight = "";
         }
+        const bottomPad = Math.min(18, Math.max(8, 10 * fontScale));
+        contentEl.style.setProperty("--room-padding-bottom", `${bottomPad}px`);
       }
       currentEl.style.fontSize = `${46 * fontScale}px`;
       currentEl.style.transform = `translateX(${(-2 * fontScale).toFixed(2)}px)`;
       if (targetEl && targetUnitEl) {
         const targetScale = fontScale;
-        targetEl.style.fontSize = `${19 * targetScale}px`;
+        targetEl.style.fontSize = `${18 * targetScale}px`;
         targetUnitEl.style.fontSize = `${12 * targetScale}px`;
         if (targetIcon) {
           targetIcon.style.setProperty("--mdc-icon-size", `${19 * targetScale}px`);
         }
       }
       nameEl.style.fontSize = `${17 * fontScale}px`;
+
+      const roomRect = room.getBoundingClientRect();
+      const currentRect = currentEl.getBoundingClientRect();
+      const currentTop = Math.max(0, currentRect.top - roomRect.top);
+      room.style.setProperty("--current-top", `${currentTop}px`);
+
+      if (contentEl && roomWidth > roomHeight) {
+        const contentRect = contentEl.getBoundingClientRect();
+        const contentLeft = Math.max(0, contentRect.left - roomRect.left);
+        const chevronLeft = Math.max(0, contentLeft / 2);
+        const aspectDelta = Math.max(0, roomWidth - roomHeight);
+        const chevronSize = Math.min(38, Math.max(16, 18 + aspectDelta * 0.16));
+        const chevronTop = Math.max(0, roomHeight / 2);
+        room.style.setProperty("--chevron-left", `${chevronLeft}px`);
+        room.style.setProperty("--chevron-top", `${chevronTop}px`);
+        room.style.setProperty("--chevron-size", `${chevronSize}px`);
+      } else {
+        room.style.removeProperty("--chevron-left");
+        room.style.removeProperty("--chevron-top");
+        room.style.removeProperty("--chevron-size");
+      }
     });
   }
 

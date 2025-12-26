@@ -22,9 +22,9 @@ heating state, and an optional top labels strip. Built to complement home assist
 1. Goto HACS (if you dont have that installed, install HACS)
 2. Add a custom repository
 3. Add the URL to this repo: `https://github.com/pacemaker82/Home-Climate-Card` using the category `Dashboard` (used to be `Lovelace` pre HACS 2.0.0)
-4. Go back to HACS and search for "compact power card" in the HACS store
+4. Go back to HACS and search for "home climate card" in the HACS store
 5. Download and refresh
-6. Goto dashboard, edit dashboard, select 'add card' button, and add the new custom Compact Power Card. Use the configuration below to setup.
+6. Goto dashboard, edit dashboard, select 'add card' button, and add the new custom Home Climate Card. Use the configuration below to setup.
 
 ## Basic usage
 

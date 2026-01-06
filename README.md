@@ -19,6 +19,8 @@ heating state, and an optional top labels strip. Built to complement home assist
 
 ## Install
 
+Search for "Home Climate Card" in HACS. Otherwise:
+
 1. Goto HACS (if you dont have that installed, install HACS)
 2. Add a custom repository
 3. Add the URL to this repo: `https://github.com/pacemaker82/Home-Climate-Card` using the category `Dashboard` (used to be `Lovelace` pre HACS 2.0.0)

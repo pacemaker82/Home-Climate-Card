@@ -143,3 +143,6 @@ labels:
     secondary: sensor.hot_water_on_minutes
     secondary_name: Total Time
 ```
+
+<img width="500" height="309" alt="Screenshot 2026-01-08 at 10 04 31" src="https://github.com/user-attachments/assets/85da70dd-931e-439a-a4bb-c312d84786e9" />
+

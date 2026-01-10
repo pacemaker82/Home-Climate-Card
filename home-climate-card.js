@@ -736,15 +736,18 @@ class HomeClimateCard extends HTMLElement {
           ? this._hass.config.unit_system.temperature
           : "";
         const unit = unitAttr || unitFallback;
+        const isUnavailable = !stateObj
+          || stateObj.state === "unavailable"
+          || stateObj.state === "unknown";
         const temp = tempAttr != null ? tempAttr : (stateObj ? stateObj.state : undefined);
-        const hasTemp = typeof temp === "number" || typeof temp === "string";
+        const hasTemp = !isUnavailable && (typeof temp === "number" || typeof temp === "string");
         const formatTemp = (value) => {
           const num = typeof value === "number" ? value : parseFloat(value);
           return Number.isFinite(num) ? num.toFixed(1) : `${value}`;
         };
         const currentValueText = hasTemp ? formatTemp(temp) : "N/A";
         const currentUnitText = hasTemp ? unit : "";
-        const hasTarget = typeof target === "number" || typeof target === "string";
+        const hasTarget = !isUnavailable && (typeof target === "number" || typeof target === "string");
         const targetValueText = hasTarget ? formatTemp(target) : "";
         const targetUnitText = hasTarget ? unit : "";
 

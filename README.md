@@ -121,29 +121,57 @@ Notes:
 
 ```yaml
 type: custom:home-climate-card
-entities:
-  - entity: climate.living_room
-    floor: 1
-    circuit: 1
-    name: Living Room
-  - entity: sensor.kitchen_temperature
-    floor: 1
-    circuit: 1
-    name: Kitchen
-    is_heating_entity: binary_sensor.kitchen_heat_call
 labels:
   - entity: binary_sensor.heating_on_off
     icon: mdi:radiator
     name: Heating
     secondary: last_updated
-  - entity: sensor.outside_temperature
-    icon: mdi:weather-partly-cloudy
-    name: Outside
+    secondary_name: Last Change
+  - entity: sensor.oil_tank_volume_percentage
+    icon: mdi:barrel
+    name: Heating Oil
+    secondary: sensor.tempest_temperature
+    secondary_name: Outside
   - entity: binary_sensor.hot_water_on_off
     icon: mdi:water-boiler
     name: Hot Water
     secondary: sensor.hot_water_on_minutes
     secondary_name: Total Time
+entities:
+  - entity: climate.entrance_hall_better_thermostat
+    floor: 0
+    name: Entrance Hall
+  - entity: climate.kitchen_thermostat
+    floor: 0
+    name: Kitchen
+    circuit: 2
+  - entity: climate.living_room_better_thermostat
+    floor: 0
+    name: Living
+  - entity: climate.snug_better_thermostat
+    floor: 0
+    name: Snug
+  - entity: sensor.toilet_h_t_temperature
+    floor: 0
+    name: Toilet
+  - entity: climate.master_bedroom_better_thermostat
+    floor: 1
+    name: Master
+  - entity: sensor.en_suite_h_t_temperature
+    floor: 1
+    name: Master Bath
+  - entity: climate.joe_better_thermostat
+    floor: 1
+    name: Joe
+  - entity: sensor.joe_bath_h_t_temperature
+    floor: 1
+    name: Joe Bath
+  - entity: climate.daisy_better_thermostat
+    floor: 1
+    name: Daisy
+  - entity: climate.office_better_thermostat
+    floor: 1
+    name: Office
 ```
 
 <img width="500" height="309" alt="Screenshot 2026-01-08 at 10 04 31" src="https://github.com/user-attachments/assets/85da70dd-931e-439a-a4bb-c312d84786e9" />

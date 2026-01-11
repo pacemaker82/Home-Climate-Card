@@ -141,6 +141,7 @@ class HomeClimateCard extends HTMLElement {
           height: 100%;
           margin: 0 auto;
           overflow: hidden;
+          min-height: var(--home-climate-card-min-height, 260px);
           min-width: 0;
         }
         .rooms {
@@ -612,6 +613,10 @@ class HomeClimateCard extends HTMLElement {
     });
     const floorNumbers = Array.from(grouped.keys()).sort((a, b) => b - a);
     if (!configHeight) {
+      const floorCount = floorNumbers.length || 1;
+      const minHeight = floorCount * 66 + (hasLabels ? 86 : 0);
+      this._card.style.minHeight = `${minHeight}px`;
+    } else {
       this._card.style.minHeight = "";
     }
     this._rooms.innerHTML = "";

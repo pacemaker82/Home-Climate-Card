@@ -51,6 +51,7 @@ entities:
 
 - `entities` (required): list of room entries (see below).
 - `labels`: list of label entries for the top strip (optional).
+- `primary_accent_color`: Override the default card color (HEX, RGB etc)
 
 ## Room entry (`entities` list)
 
@@ -62,6 +63,7 @@ entities:
     name: Living Room
     no_heat_source: false
     is_heating_entity: binary_sensor.living_room_heat_call
+    color: red
 ```
 
 - `entity` (required): climate or temperature entity that represents "a room".
@@ -70,6 +72,7 @@ entities:
 - `name`: Label override for the room. Falls back to entity friendly name.
 - `no_heat_source`: if `true`, suppresses heating visuals for this room.
 - `is_heating_entity`: optional binary_sensor used to detect heating when not using a climate sensor.
+- `color`: Override the specific room color (HEX, RGB etc)
 
 ### Understanding Floors
 
@@ -93,9 +96,11 @@ labels:
     icon: mdi:radiator
     name: Heating
     secondary: last_updated
+    color: "#FFFFFF"
   - entity: sensor.outside_temperature
     icon: mdi:weather-partly-cloudy
     name: Outside
+    color: "rgb(100,100,100)"
   - entity: binary_sensor.hot_water_on_off
     icon: mdi:water-boiler
     name: Hot Water
@@ -108,6 +113,7 @@ labels:
 - `name`: label title (defaults to entity friendly name).
 - `secondary`: `last_updated` or another entity id.
 - `secondary_name`: prefix text for the secondary line (e.g., `Total Time`).
+- `color`: Override the specific label color (HEX, RGB etc)
 
 Notes:
 - Numeric values are shown with up to 2 decimals (trailing zeros trimmed).
@@ -121,12 +127,14 @@ Notes:
 
 ```yaml
 type: custom:home-climate-card
+primary_accent_color: "#FF0000"
 labels:
   - entity: binary_sensor.heating_on_off
     icon: mdi:radiator
     name: Heating
     secondary: last_updated
     secondary_name: Last Change
+    color: blue
   - entity: sensor.oil_tank_volume_percentage
     icon: mdi:barrel
     name: Heating Oil
@@ -141,6 +149,7 @@ entities:
   - entity: climate.entrance_hall_better_thermostat
     floor: 0
     name: Entrance Hall
+    color: yellow
   - entity: climate.kitchen_thermostat
     floor: 0
     name: Kitchen

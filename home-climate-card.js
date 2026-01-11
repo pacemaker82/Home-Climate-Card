@@ -3,6 +3,9 @@ class HomeClimateCard extends HTMLElement {
   static getConfigForm() {
     return {
       schema: [    
+        { name: "primary_accent_color",
+          selector: { text: {} },
+        },
         { name: "entities",
           selector: {
             object: {
@@ -51,6 +54,7 @@ class HomeClimateCard extends HTMLElement {
                 entity: { label: "Entity", selector: { entity: {} } },
                 icon: { label: "Icon override", selector: { icon: {} } },
                 name: { label: "Name", selector: { text: {} } },
+                color: { label: "Colour", selector: { text: {} } },
                 secondary: { label: "Secondary (entity or last_updated)", selector: { text: {} } },
                 secondary_name: { label: "Secondary name", selector: { text: {} } },
               },
@@ -77,6 +81,7 @@ class HomeClimateCard extends HTMLElement {
           name: "Living Room",
         },
       ],
+      primary_accent_color: "",
       labels: [
         {
           entity: "binary_sensor.heating_on_off",
@@ -104,8 +109,6 @@ class HomeClimateCard extends HTMLElement {
     return {
       rows: 5,
       columns: 9,
-      min_rows: 5,
-      min_columns: 9,
     };
   }  
 
@@ -138,7 +141,6 @@ class HomeClimateCard extends HTMLElement {
           height: 100%;
           margin: 0 auto;
           overflow: hidden;
-          min-height: var(--home-climate-card-min-height, 260px);
           min-width: 0;
         }
         .rooms {
@@ -300,10 +302,15 @@ class HomeClimateCard extends HTMLElement {
           background: transparent;
           border: 3px solid color-mix(in srgb, var(--state-climate-heat-color) 70%, transparent);
           position: relative;
+          transition: opacity 0.25s ease, filter 0.25s ease;
         }
         .room.disabled {
           opacity: 0.5;
           border-color: var(--disabled-color);
+        }
+        .room.unavailable {
+          opacity: 0.35;
+          filter: grayscale(0.65);
         }
         .room.disabled .current,
         .room.disabled .target,
@@ -455,8 +462,9 @@ class HomeClimateCard extends HTMLElement {
           margin-left: 2px;
         }
         .name {
-          white-space: nowrap;
+          white-space: normal;
           overflow: hidden;
+          overflow-wrap: anywhere;
           line-height: 1.1;
           font-weight: 600;
           color: var(--primary-text-color);
@@ -559,6 +567,13 @@ class HomeClimateCard extends HTMLElement {
     if (!force && !this._shouldRender()) return;
     const configWidth = Number(this._config.canvas_width) || Number(this._config.canvas_size) || 0;
     const configHeight = Number(this._config.canvas_height) || Number(this._config.canvas_size) || 0;
+    if (this._card) {
+      if (this._config.primary_accent_color) {
+        this._card.style.setProperty("--state-climate-heat-color", this._config.primary_accent_color);
+      } else {
+        this._card.style.removeProperty("--state-climate-heat-color");
+      }
+    }
     if (configWidth) {
       this._card.style.width = `${configWidth}px`;
     } else {
@@ -597,9 +612,7 @@ class HomeClimateCard extends HTMLElement {
     });
     const floorNumbers = Array.from(grouped.keys()).sort((a, b) => b - a);
     if (!configHeight) {
-      const floorCount = floorNumbers.length || 1;
-      const baseHeight = floorCount * 100 + (hasLabels ? 90 : 0);
-      this._card.style.minHeight = `${baseHeight}px`;
+      this._card.style.minHeight = "";
     }
     this._rooms.innerHTML = "";
 
@@ -625,6 +638,9 @@ class HomeClimateCard extends HTMLElement {
         const iconName = configItem.icon || stateObj.attributes && stateObj.attributes.icon || "";
         const label = document.createElement("div");
         label.className = "label";
+        if (typeof configItem.color === "string" && configItem.color.trim()) {
+          label.style.setProperty("--state-climate-heat-color", configItem.color.trim());
+        }
         label.setAttribute("role", "button");
         label.setAttribute("tabindex", "0");
         label.setAttribute(
@@ -754,6 +770,10 @@ class HomeClimateCard extends HTMLElement {
         const tempValue = typeof temp === "number" ? temp : parseFloat(temp);
         const room = document.createElement("div");
         room.className = "room";
+        room.classList.toggle("unavailable", isUnavailable);
+        if (typeof item.color === "string" && item.color.trim()) {
+          room.style.setProperty("--state-climate-heat-color", item.color.trim());
+        }
         if (Number.isFinite(tempValue)) {
           room.dataset.currentTemp = String(tempValue);
         }
@@ -1043,6 +1063,9 @@ class HomeClimateCard extends HTMLElement {
       const isClimate = item.entity.startsWith("climate.");
       const hasHeatingEntity = Boolean(item.is_heating_entity || item.is_heating);
       const isClimateOff = isClimate && stateObj && stateObj.state === "off";
+      const isUnavailable = !stateObj
+        || stateObj.state === "unavailable"
+        || stateObj.state === "unknown";
       const rawTemp = stateObj && stateObj.attributes
         ? stateObj.attributes.current_temperature
         : (stateObj ? stateObj.state : undefined);
@@ -1079,6 +1102,7 @@ class HomeClimateCard extends HTMLElement {
         && !shouldHeat;
       const tempChangeDirection = this._tempChangeDirections.get(entityId);
       room.classList.toggle("disabled", isClimateOff);
+      room.classList.toggle("unavailable", isUnavailable);
       room.classList.toggle("heating", shouldHeat);
       room.classList.toggle("near-target", nearTarget);
       const targetEl = room.querySelector(".target");

@@ -41,7 +41,11 @@ class HomeClimateCard extends HTMLElement {
                 is_heating_entity: {
                   label: "Alternative heating signal",
                   selector: { entity: { domain: "binary_sensor", } },               
-                },                                                                                                    
+                },
+                valve_entity: {
+                  label: "Valve % Entity",
+                  selector: { entity: {} },
+                },                                                                                                   
               },
             },
           },
@@ -329,11 +333,14 @@ class HomeClimateCard extends HTMLElement {
         }
         .room-heat-overlay {
           position: absolute;
-          inset: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          height: var(--heat-level, 0%);
           border-radius: 2px;
           background-color: var(--state-climate-heat-color);
           opacity: 0;
-          transition: opacity 0.4s ease;
+          transition: opacity 0.4s ease, height 0.35s ease;
           pointer-events: none;
         }
         .room-change-icon {
@@ -614,7 +621,7 @@ class HomeClimateCard extends HTMLElement {
     const floorNumbers = Array.from(grouped.keys()).sort((a, b) => b - a);
     if (!configHeight) {
       const floorCount = floorNumbers.length || 1;
-      const minHeight = floorCount * 66 + (hasLabels ? 86 : 0);
+      const minHeight = floorCount * 74 + (hasLabels ? 86 : 0);
       this._card.style.minHeight = `${minHeight}px`;
     } else {
       this._card.style.minHeight = "";
@@ -750,6 +757,7 @@ class HomeClimateCard extends HTMLElement {
         const circuit = entry.circuit;
         const noHeatSource = item.no_heat_source === true;
         const heatingEntity = item && (item.is_heating_entity || item.is_heating);
+        const valveEntity = item && item.valve_entity;
         const tempAttr = stateObj && stateObj.attributes && stateObj.attributes.current_temperature;
         const target = stateObj && stateObj.attributes && stateObj.attributes.temperature;
         const unitAttr = stateObj && stateObj.attributes && stateObj.attributes.unit_of_measurement;
@@ -789,6 +797,9 @@ class HomeClimateCard extends HTMLElement {
         }
         if (heatingEntity) {
           room.dataset.heatingEntity = heatingEntity;
+        }
+        if (valveEntity) {
+          room.dataset.valveEntity = valveEntity;
         }
         const heatOverlay = document.createElement("div");
         heatOverlay.className = "room-heat-overlay";
@@ -910,6 +921,11 @@ class HomeClimateCard extends HTMLElement {
         currentTemp,
         targetTemp
       );
+      if (item.valve_entity) {
+        const valveObj = this._hass.states[item.valve_entity];
+        const valveState = valveObj ? valveObj.state : "";
+        parts.push("valve", item.valve_entity, valveState);
+      }
     });
     labels.forEach((item) => {
       if (!item || !item.entity) return;
@@ -1063,6 +1079,7 @@ class HomeClimateCard extends HTMLElement {
       const item = entities.find((entry) => entry && entry.entity === entityId);
       if (!item) return;
       const stateObj = this._hass && this._hass.states[item.entity];
+      const valveEntity = item.valve_entity;
       const circuit = Number.isInteger(item.circuit) ? item.circuit : parseInt(item.circuit, 10) || 1;
       const noHeatSource = item.no_heat_source === true;
       const isClimate = item.entity.startsWith("climate.");
@@ -1099,6 +1116,14 @@ class HomeClimateCard extends HTMLElement {
         isHeating ||
         (!isClimate && !hasHeatingEntity && heatingCircuits.has(circuit))
       );
+      let valvePercent = 100;
+      if (valveEntity) {
+        const valveObj = this._hass && this._hass.states[valveEntity];
+        const valveState = valveObj ? valveObj.state : "";
+        const parsedValve = typeof valveState === "number" ? valveState : parseFloat(valveState);
+        valvePercent = Number.isFinite(parsedValve) ? parsedValve : 0;
+      }
+      valvePercent = this._clamp(valvePercent, 0, 100);
       const targetTemp = stateObj && stateObj.attributes ? stateObj.attributes.temperature : undefined;
       const parsedTarget = typeof targetTemp === "number" ? targetTemp : parseFloat(targetTemp);
       const nearTarget = Number.isFinite(currentTemp)
@@ -1110,6 +1135,11 @@ class HomeClimateCard extends HTMLElement {
       room.classList.toggle("unavailable", isUnavailable);
       room.classList.toggle("heating", shouldHeat);
       room.classList.toggle("near-target", nearTarget);
+      if (shouldHeat) {
+        room.style.setProperty("--heat-level", `${valvePercent}%`);
+      } else {
+        room.style.setProperty("--heat-level", "0%");
+      }
       const targetEl = room.querySelector(".target");
       if (targetEl) {
         targetEl.classList.toggle("heating", shouldHeat);

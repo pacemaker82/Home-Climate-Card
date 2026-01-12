@@ -73,6 +73,7 @@ entities:
 - `no_heat_source`: if `true`, suppresses heating visuals for this room.
 - `is_heating_entity`: optional binary_sensor used to detect heating when not using a climate sensor.
 - `color`: Override the specific room color (HEX, RGB etc)
+- `valve_entity`: Entity to represent the % open a TRV valve is for the room. Shows when room is heating.
 
 ### Understanding Floors
 

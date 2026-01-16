@@ -159,15 +159,24 @@ class HomeClimateCard extends HTMLElement {
           position: absolute;
           left: 0;
           right: 0;
-          top: 0;
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 6px;
-          padding: 10px 10px 4px;
           pointer-events: auto;
+        }
+        .labels-top {
+          top: 0;
+          padding: 10px 10px 4px;
+        }
+        .labels-bottom {
+          bottom: 0;
+          padding: 4px 10px 10px;
         }
         .labels[data-count="1"] {
           grid-template-columns: 1fr;
+        }
+        .labels[data-count="2"] {
+          grid-template-columns: repeat(2, 1fr);
         }
         .labels[data-count="1"] .label {
           grid-column: 1;
@@ -223,7 +232,7 @@ class HomeClimateCard extends HTMLElement {
           text-align: right;
         }
         .labels[data-count="3"] .label:nth-child(2) {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: auto 1fr;
           justify-items: center;
         }
         .labels[data-count="3"] .label:nth-child(2) ha-icon {
@@ -235,7 +244,7 @@ class HomeClimateCard extends HTMLElement {
           text-align: center;
         }
         .labels[data-count="2"] .label:nth-child(2) {
-          grid-column: 3;
+          grid-column: 2;
           grid-template-columns: 1fr auto;
           justify-items: end;
         }
@@ -307,6 +316,7 @@ class HomeClimateCard extends HTMLElement {
           background: transparent;
           border: 3px solid color-mix(in srgb, var(--state-climate-heat-color) 70%, transparent);
           position: relative;
+          overflow: hidden;
           transition: opacity 0.25s ease, filter 0.25s ease;
         }
         .room.disabled {
@@ -481,17 +491,22 @@ class HomeClimateCard extends HTMLElement {
       const card = document.createElement("div");
       card.className = "card";
       const labels = document.createElement("div");
-      labels.className = "labels";
+      labels.className = "labels labels-top";
+      const labelsBottom = document.createElement("div");
+      labelsBottom.className = "labels labels-bottom";
       const rooms = document.createElement("div");
       rooms.className = "rooms";
-      card.append(labels, rooms);
+      card.append(labels, rooms, labelsBottom);
       this.shadowRoot.append(style, card);
       this._rooms = rooms;
       this._labels = labels;
+      this._labelsBottom = labelsBottom;
       this._card = card;
       this._resizeObserver = new ResizeObserver(() => this._scheduleRender());
       this._resizeObserver.observe(this._card);
       this._resizeObserver.observe(this);
+      this._resizeObserver.observe(this._labels);
+      this._resizeObserver.observe(this._labelsBottom);
     }
     this._render(true);
   }
@@ -592,22 +607,21 @@ class HomeClimateCard extends HTMLElement {
     } else {
       this._card.style.height = "100%";
     }
-    const rect = this._card.getBoundingClientRect();
-    const width = rect.width || configWidth || 0;
-    const height = rect.height || configHeight || 0;
-    if (!width || !height) {
-
-      this._renderRetryCount = (this._renderRetryCount || 0) + 1;
-      if (this._renderRetryCount <= 30) {
-        this._scheduleRender(120);
-      }
-      return;
-    }
-    this._renderRetryCount = 0;
     const roomsPaddingX = 4;
     const roomsPaddingBottom = 4;
+    const labelsRoomsGap = 3;
     const labelsConfig = Array.isArray(this._config.labels) ? this._config.labels : [];
-    const hasLabels = labelsConfig.length > 0;
+    const labelsTotal = labelsConfig.length;
+    let topLabelCount = labelsTotal;
+    if (labelsTotal === 4) {
+      topLabelCount = 2;
+    } else if (labelsTotal >= 5) {
+      topLabelCount = 3;
+    }
+    const topLabelsConfig = labelsConfig.slice(0, topLabelCount);
+    const bottomLabelsConfig = labelsConfig.slice(topLabelCount, Math.min(labelsTotal, 6));
+    const hasTopLabels = topLabelsConfig.length > 0;
+    const hasBottomLabels = bottomLabelsConfig.length > 0;
     const entities = this._config.entities || [];
 
     const grouped = new Map();
@@ -621,28 +635,109 @@ class HomeClimateCard extends HTMLElement {
     const floorNumbers = Array.from(grouped.keys()).sort((a, b) => b - a);
     if (!configHeight) {
       const floorCount = floorNumbers.length || 1;
-      const minHeight = floorCount * 74 + (hasLabels ? 86 : 0);
+      const labelRows = (hasTopLabels ? 1 : 0) + (hasBottomLabels ? 1 : 0);
+      const labelGaps = (hasTopLabels ? 1 : 0) + (hasBottomLabels ? 1 : 0);
+      const minHeight = floorCount * 74 + (labelRows * 86) + (labelGaps * labelsRoomsGap);
       this._card.style.minHeight = `${minHeight}px`;
     } else {
       this._card.style.minHeight = "";
     }
+
+    const rect = this._card.getBoundingClientRect();
+    const width = rect.width || configWidth || 0;
+    const height = rect.height || configHeight || 0;
+    if (!width || !height) {
+      this._renderRetryCount = (this._renderRetryCount || 0) + 1;
+      if (this._renderRetryCount <= 30) {
+        this._scheduleRender(120);
+      }
+      return;
+    }
+    this._renderRetryCount = 0;
     this._rooms.innerHTML = "";
 
-    if (this._labels) {
-      this._labels.style.display = hasLabels ? "" : "none";
-      this._labels.dataset.count = hasLabels ? String(labelsConfig.length) : "0";
-      this._labels.innerHTML = "";
-      const formatNumber = (value) => {
-        const num = typeof value === "number" ? value : parseFloat(value);
-        if (!Number.isFinite(num)) return `${value}`;
-        const fixed = num.toFixed(2);
-        return fixed.replace(/\.?0+$/, "");
+    const formatNumber = (value) => {
+      const num = typeof value === "number" ? value : parseFloat(value);
+      if (!Number.isFinite(num)) return `${value}`;
+      const fixed = num.toFixed(2);
+      return fixed.replace(/\.?0+$/, "");
+    };
+    const formatCurrency = (value, unit) => {
+      const unitText = typeof unit === "string" ? unit.trim().toUpperCase() : "";
+      const symbols = {
+        USD: "$",
+        GBP: "£",
+        EUR: "€",
+        JPY: "¥",
+        AUD: "A$",
+        CAD: "C$",
+        CHF: "CHF",
+        CNY: "¥",
+        HKD: "HK$",
+        NZD: "NZ$",
+        SEK: "kr",
+        NOK: "kr",
+        MXN: "MX$",
       };
-      const formatSecondary = (value, unit) => {
-        if (value == null) return "";
-        const formatted = formatNumber(value);
-        return unit ? `${formatted}${unit}` : formatted;
-      };
+      const symbol = symbols[unitText];
+      if (!symbol) return null;
+      const formatted = formatNumber(value);
+      return `${symbol}${formatted}`;
+    };
+    const formatSecondary = (value, unit, isDuration) => {
+      if (value == null) return "";
+      if (isDuration) return formatDurationSeconds(value, unit);
+      const currencyText = formatCurrency(value, unit);
+      if (currencyText) return currencyText;
+      const formatted = formatNumber(value);
+      return unit ? `${formatted}${unit}` : formatted;
+    };
+    const parseDurationSeconds = (value, unit) => {
+      const raw = typeof value === "number" ? value : parseFloat(value);
+      if (!Number.isFinite(raw)) return NaN;
+      const unitText = typeof unit === "string" ? unit.trim().toLowerCase() : "";
+      if (unitText === "ms" || unitText === "millisecond" || unitText === "milliseconds") {
+        return raw / 1000;
+      }
+      if (unitText === "s" || unitText === "sec" || unitText === "secs"
+        || unitText === "second" || unitText === "seconds") {
+        return raw;
+      }
+      if (unitText === "min" || unitText === "mins" || unitText === "minute"
+        || unitText === "minutes" || unitText === "m") {
+        return raw * 60;
+      }
+      if (unitText === "h" || unitText === "hr" || unitText === "hrs"
+        || unitText === "hour" || unitText === "hours") {
+        return raw * 3600;
+      }
+      if (unitText === "d" || unitText === "day" || unitText === "days") {
+        return raw * 86400;
+      }
+      return raw;
+    };
+    const formatDurationSeconds = (value, unit) => {
+      const totalSeconds = parseDurationSeconds(value, unit);
+      if (!Number.isFinite(totalSeconds)) return `${value}`;
+      if (totalSeconds <= 0) return "0s";
+      const total = Math.floor(totalSeconds);
+      const hours = Math.floor(total / 3600);
+      const minutes = Math.floor((total % 3600) / 60);
+      const seconds = total % 60;
+      const parts = [];
+      if (hours > 0) parts.push(`${hours}h`);
+      if (minutes > 0) parts.push(`${minutes}m`);
+      if (seconds > 0) parts.push(`${seconds}s`);
+      if (parts.length === 0) return "0s";
+      return parts.slice(0, 2).join(" ");
+    };
+    const renderLabels = (container, labelItems) => {
+      if (!container) return;
+      const hasLabels = labelItems.length > 0;
+      container.style.display = hasLabels ? "" : "none";
+      container.dataset.count = hasLabels ? String(labelItems.length) : "0";
+      container.innerHTML = "";
+      if (!hasLabels) return;
       const buildLabel = (configItem) => {
         if (!configItem || !configItem.entity || !this._hass) return;
         const stateObj = this._hass.states[configItem.entity];
@@ -689,8 +784,18 @@ class HomeClimateCard extends HTMLElement {
         const unit = stateObj.attributes && stateObj.attributes.unit_of_measurement
           ? stateObj.attributes.unit_of_measurement
           : "";
-        const formattedState = formatNumber(stateObj.state);
-        value.textContent = unit ? `${formattedState}${unit}` : formattedState;
+        const isDuration = stateObj.attributes && stateObj.attributes.device_class === "duration";
+        if (isDuration) {
+          value.textContent = formatDurationSeconds(stateObj.state, unit);
+        } else {
+          const currencyText = formatCurrency(stateObj.state, unit);
+          if (currencyText) {
+            value.textContent = currencyText;
+          } else {
+            const formattedState = formatNumber(stateObj.state);
+            value.textContent = unit ? `${formattedState}${unit}` : formattedState;
+          }
+        }
         if (stateObj.state === "on") {
           label.classList.add("state-on");
         }
@@ -718,7 +823,9 @@ class HomeClimateCard extends HTMLElement {
               const secUnit = secondaryState.attributes && secondaryState.attributes.unit_of_measurement
                 ? secondaryState.attributes.unit_of_measurement
                 : "";
-              secondaryValue.textContent = formatSecondary(secondaryState.state, secUnit);
+              const secIsDuration = secondaryState.attributes
+                && secondaryState.attributes.device_class === "duration";
+              secondaryValue.textContent = formatSecondary(secondaryState.state, secUnit, secIsDuration);
             }
           }
           if (secondaryValue.textContent) {
@@ -726,23 +833,64 @@ class HomeClimateCard extends HTMLElement {
               secondary.append(secondaryLabel);
             }
             secondary.append(secondaryValue);
+            secondary.setAttribute("role", "button");
+            secondary.setAttribute("tabindex", "0");
+            if (configItem.secondary !== "last_updated") {
+              const openSecondaryInfo = () => {
+                this.dispatchEvent(new CustomEvent("hass-more-info", {
+                  detail: { entityId: configItem.secondary },
+                  bubbles: true,
+                  composed: true,
+                }));
+              };
+              secondary.addEventListener("click", (event) => {
+                event.stopPropagation();
+                openSecondaryInfo();
+              });
+              secondary.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openSecondaryInfo();
+                }
+              });
+            }
             label.append(secondary);
           }
         }
-        this._labels.append(label);
+        container.append(label);
       };
-      labelsConfig.forEach((item) => buildLabel(item));
-    }
+      labelItems.forEach((item) => buildLabel(item));
+    };
+    renderLabels(this._labels, topLabelsConfig);
+    renderLabels(this._labelsBottom, bottomLabelsConfig);
 
-    const labelsHeight = hasLabels && this._labels
-      ? Math.ceil(this._labels.getBoundingClientRect().height)
-      : 0;
-    const roomsTop = hasLabels ? labelsHeight : roomsPaddingBottom;
-    this._rooms.style.left = `${roomsPaddingX}px`;
-    this._rooms.style.top = `${roomsTop}px`;
-    this._rooms.style.width = `${width - roomsPaddingX * 2}px`;
-    this._rooms.style.height = `${height - roomsTop - roomsPaddingBottom}px`;
-    this._rooms.style.padding = `${roomsPaddingBottom}px ${roomsPaddingX}px ${roomsPaddingBottom}px`;
+    const getLabelHeights = () => ({
+      top: hasTopLabels && this._labels
+        ? Math.ceil(this._labels.getBoundingClientRect().height)
+        : 0,
+      bottom: hasBottomLabels && this._labelsBottom
+        ? Math.ceil(this._labelsBottom.getBoundingClientRect().height)
+        : 0,
+    });
+    const applyRoomsLayout = (labelHeights) => {
+      const roomsTop = hasTopLabels ? labelHeights.top + labelsRoomsGap : roomsPaddingBottom;
+      const roomsBottom = hasBottomLabels ? labelHeights.bottom + labelsRoomsGap : roomsPaddingBottom;
+      this._rooms.style.left = `${roomsPaddingX}px`;
+      this._rooms.style.top = `${roomsTop}px`;
+      this._rooms.style.width = `${width - roomsPaddingX * 2}px`;
+      this._rooms.style.height = `${height - roomsTop - roomsBottom}px`;
+      this._rooms.style.padding = `${roomsPaddingBottom}px ${roomsPaddingX}px ${roomsPaddingBottom}px`;
+    };
+    const labelHeights = getLabelHeights();
+    applyRoomsLayout(labelHeights);
+    requestAnimationFrame(() => {
+      if (!this._rooms) return;
+      const nextHeights = getLabelHeights();
+      if (nextHeights.top !== labelHeights.top || nextHeights.bottom !== labelHeights.bottom) {
+        applyRoomsLayout(nextHeights);
+      }
+    });
 
     floorNumbers.forEach((floorNum, floorIndex) => {
       const list = grouped.get(floorNum) || [];
@@ -1025,10 +1173,15 @@ class HomeClimateCard extends HTMLElement {
       if (contentEl && roomWidth > roomHeight) {
         const contentRect = contentEl.getBoundingClientRect();
         const contentLeft = Math.max(0, contentRect.left - roomRect.left);
-        const chevronLeft = Math.max(0, contentLeft / 2);
         const aspectDelta = Math.max(0, roomWidth - roomHeight);
         const chevronSize = Math.min(38, Math.max(16, 18 + aspectDelta * 0.16));
-        const chevronTop = Math.max(0, roomHeight / 2);
+        const chevronMargin = 2;
+        const chevronLeftMin = chevronSize / 2 + chevronMargin;
+        const chevronLeftMax = Math.max(chevronLeftMin, roomWidth - chevronSize / 2 - chevronMargin);
+        const chevronTopMin = chevronSize / 2 + chevronMargin;
+        const chevronTopMax = Math.max(chevronTopMin, roomHeight - chevronSize / 2 - chevronMargin);
+        const chevronLeft = Math.min(chevronLeftMax, Math.max(chevronLeftMin, contentLeft / 2));
+        const chevronTop = Math.min(chevronTopMax, Math.max(chevronTopMin, roomHeight / 2));
         room.style.setProperty("--chevron-left", `${chevronLeft}px`);
         room.style.setProperty("--chevron-top", `${chevronTop}px`);
         room.style.setProperty("--chevron-size", `${chevronSize}px`);
@@ -1125,10 +1278,16 @@ class HomeClimateCard extends HTMLElement {
       }
       valvePercent = this._clamp(valvePercent, 0, 100);
       const targetTemp = stateObj && stateObj.attributes ? stateObj.attributes.temperature : undefined;
+      const unitAttr = stateObj && stateObj.attributes && stateObj.attributes.unit_of_measurement;
+      const unitFallback = this._hass && this._hass.config && this._hass.config.unit_system
+        ? this._hass.config.unit_system.temperature
+        : "";
+      const tempUnit = unitAttr || unitFallback;
       const parsedTarget = typeof targetTemp === "number" ? targetTemp : parseFloat(targetTemp);
+      const nearTargetThreshold = tempUnit === "°F" ? 0.54 : 0.3;
       const nearTarget = Number.isFinite(currentTemp)
         && Number.isFinite(parsedTarget)
-        && Math.abs(currentTemp - parsedTarget) <= 0.3
+        && Math.abs(currentTemp - parsedTarget) <= nearTargetThreshold
         && !shouldHeat;
       const tempChangeDirection = this._tempChangeDirections.get(entityId);
       room.classList.toggle("disabled", isClimateOff);

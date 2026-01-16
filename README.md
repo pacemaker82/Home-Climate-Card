@@ -87,9 +87,19 @@ E.g. Room 1 has smart TRV with climate entity, Room 2 has radiator with simple t
 
 To override this functionality, either set the room to a random circuit number e.g. `999` or set `no_heat_source: true` on the entity.
 
+### Chevrons
+
+<img width="498" height="121" alt="Screenshot 2026-01-16 at 11 22 43" src="https://github.com/user-attachments/assets/005ab130-8308-4abd-9912-27c40ae7f450" />
+
+Each room will display an `up` or `down` chevron icon momentarily when the room temperature increases or decreases from the previous value. This is to help you identify room temperature changes.
+
+### Room Temperature Label Colors
+
+Each room temperature label will change color to identify that its within 0.3C/0.5F of the target temperature, allowing you to see if the heating will turn on or off soon for that room. 
+
 ## Label entry (`labels` list)
 
-Each label renders an icon + name + state + optional secondary line. You can show a max of 3 labels.
+Each label renders an icon + name + state + optional secondary line. You can show a max of 6 labels (1-3 on the top row, 4-6 on a second row after the rooms).
 
 ```yaml
 labels:
@@ -123,6 +133,7 @@ Notes:
   - 1 label: full-width center.
   - 2 labels: left and right slots.
   - 3 labels: left, center, right.
+  - 4-6 labels: first row (1-3), rooms/floors, second row (4-6).
 
 ## Full example
 
@@ -185,4 +196,3 @@ entities:
 ```
 
 <img width="500" height="309" alt="Screenshot 2026-01-08 at 10 04 31" src="https://github.com/user-attachments/assets/85da70dd-931e-439a-a4bb-c312d84786e9" />
-
